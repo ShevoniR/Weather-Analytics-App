@@ -11,6 +11,7 @@ function Dashboard() {
     loginWithRedirect,
     getAccessTokenSilently,
   } = useAuth0();
+  const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,7 +25,11 @@ function Dashboard() {
       try {
         setLoading(true);
         setError(null);
-        const token = await getAccessTokenSilently();
+        const token = await getAccessTokenSilently({
+          authorizationParams: {
+            audience,
+          },
+        });
         const result = await getWeatherData(token);
         setData(result);
       } catch (err) {

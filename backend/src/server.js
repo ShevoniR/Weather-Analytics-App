@@ -1,10 +1,10 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const weatherRoutes = require('./routes/weatherRoutes');
 const { checkJwt } = require('./middleware/auth');
-
-dotenv.config();
 
 const app = express();
 

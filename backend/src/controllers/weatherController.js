@@ -53,7 +53,10 @@ async function getWeatherSummary(req, res) {
     return res.json(ranked);
   } catch (err) {
     console.error('Error in getWeatherSummary:', err);
-    return res.status(500).json({ error: 'Failed to fetch weather data' });
+    return res.status(500).json({
+      error: 'Failed to fetch weather data',
+      details: err && err.message ? err.message : String(err),
+    });
   }
 }
 

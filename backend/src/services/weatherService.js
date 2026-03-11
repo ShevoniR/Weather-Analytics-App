@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const { getCache, setCache } = require('../cache/cache');
 
 const OPEN_WEATHER_ENDPOINT =
