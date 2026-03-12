@@ -19,7 +19,7 @@ export default function Dashboard() {
       setLoading(true)
       setError(null)
       const token = await getAccessTokenSilently({
-        authorizationParams: { audience: process.env.REACT_APP_AUTH0_AUDIENCE },
+        authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE },
       })
       const data = await fetchWeatherData(token)
       setCities(data.cities)
@@ -50,7 +50,7 @@ export default function Dashboard() {
     try {
       setRefreshing(true)
       const token = await getAccessTokenSilently({
-        authorizationParams: { audience: process.env.REACT_APP_AUTH0_AUDIENCE },
+        authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE },
       })
       await refreshWeatherData(token)
       await loadData()
