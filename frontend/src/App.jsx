@@ -1,18 +1,48 @@
-import './App.css'
+import React from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
+import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
-import Logout from './components/Logout'
 
-function App() {
-  return (
-    <>
-      <header style={{ padding: '0.5rem 1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-        <Logout />
-      </header>
-      <main>
-        <Dashboard />
-      </main>
-    </>
-  )
+export default function App() {
+  const { isLoading, isAuthenticated, error } = useAuth0()
+
+  if (isLoading) {
+    return (
+      <div style={styles.loading}>
+        <p>Loading…</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={styles.error}>
+        <h2>Authentication Error</h2>
+        <p>{error.message}</p>
+      </div>
+    )
+  }
+
+  return isAuthenticated ? <Dashboard /> : <LoginPage />
 }
 
-export default App
+const styles = {
+  loading: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '100vh',
+    color: '#4a5568',
+    fontSize: '1.1rem',
+  },
+  error: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '100vh',
+    color: '#c53030',
+    textAlign: 'center',
+    padding: '2rem',
+  },
+}
