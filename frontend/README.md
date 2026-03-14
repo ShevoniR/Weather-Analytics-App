@@ -129,10 +129,10 @@ All 28 tests should pass.
 
 | Variable                    | Description                                    |
 | --------------------------- | ---------------------------------------------- |
-| `REACT_APP_AUTH0_DOMAIN`    | Same Auth0 domain                              |
-| `REACT_APP_AUTH0_CLIENT_ID` | SPA Client ID from Auth0                       |
-| `REACT_APP_AUTH0_AUDIENCE`  | Same audience as backend                       |
-| `REACT_APP_API_URL`         | Backend URL (default: `http://localhost:5000`) |
+| `VITE_AUTH0_DOMAIN`    | Same Auth0 domain                              |
+| `VITE_AUTH0_CLIENT_ID` | SPA Client ID from Auth0                       |
+| `VITE_AUTH0_AUDIENCE`  | Same audience as backend                       |
+| `VITE_API_URL`         | Backend URL (default: `http://localhost:5000`) |
 
 ---
 
