@@ -22,7 +22,9 @@ weather-app/
 │       └── services/
 │           ├── cacheService.js        # In-memory cache wrapper
 │           ├── comfortService.js      # Comfort Index formula
-│           └── weatherService.js     # OWM fetch + orchestration
+│           ├── weatherService.js      # OWM fetch + orchestration
+│           └── __tests__/
+│               └── comfortService.test.js   # Unit tests (Jest)
 └── frontend/
     ├── package.json
     ├── .env.example
@@ -30,14 +32,16 @@ weather-app/
         ├── index.js                   # React entry point
         ├── App.js                     # Auth-based routing
         ├── context/
-        │   └── AuthProvider.jsx       # Auth0Provider wrapper
+        │   ├── AuthProvider.jsx       # Auth0Provider wrapper
+        │   └── ThemeContext.jsx       # Dark/light mode state + CSS variables
         ├── services/
         │   └── weatherApi.js          # API calls to backend
-        └── pages/
-            ├── LoginPage.jsx          # Unauthenticated view
-            └── Dashboard.jsx          # Main authenticated view
+        ├── pages/
+        │   ├── LoginPage.jsx          # Unauthenticated view
+        │   └── Dashboard.jsx          # Main authenticated view (sort, filter, theme toggle)
         └── components/
-            └── CityCard.jsx           # Per-city weather + score card
+            ├── CityCard.jsx           # Per-city weather + score card
+            └── TemperatureChart.jsx   # SVG temperature trend chart
 ```
 
 ---
@@ -90,6 +94,21 @@ npm start
 ```
 
 Frontend runs at `http://localhost:3000`.
+
+---
+
+## Running Tests
+
+Unit tests cover the Comfort Index formula in isolation — no network calls, no Auth0, no cache.
+
+```bash
+cd backend
+npm test                  # run once
+npm run test:watch        # re-run on file save
+npm run test:coverage     # with coverage report
+```
+
+All 28 tests should pass.
 
 ---
 
@@ -211,6 +230,97 @@ The cache is implemented with `node-cache` (in-process, no Redis required).
 
 ---
 
+## Additional Features
+
+### Dark Mode
+
+The application supports a dark/light theme that persists across page reloads.
+
+**How it works:**
+
+All component colours are defined as CSS custom properties (variables) — e.g. `var(--bg-card)`, `var(--text-primary)` — with two sets of values: one under `:root` (light) and one under `body.dark-mode` (dark). When dark mode is active, `ThemeContext` adds the `dark-mode` class to `<body>`, and the browser resolves every variable to its dark value automatically. No individual component needs to check the current theme; they just use the variable.
+
+The preference is saved to `localStorage` so it survives a page reload. On a user's first visit, the OS-level preference (`prefers-color-scheme: dark`) is used as the default.
+
+The toggle button is in the top-right of the Dashboard header.
+
+**Files involved:**
+
+- `frontend/src/context/ThemeContext.jsx` — provider, CSS variable injection, localStorage persistence
+- `frontend/src/index.js` — wraps the app in `<ThemeProvider>` as the outermost wrapper
+- All component style objects use `var(--*)` instead of hardcoded colours
+
+---
+
+### Unit Tests
+
+The Comfort Index formula is covered by **28 Jest unit tests** in `backend/src/services/__tests__/comfortService.test.js`.
+
+Tests are grouped into 7 `describe` blocks:
+
+| Block                 | What it covers                                                                   |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Return shape          | `score` is an integer 0–100; `breakdown.penalties` object is present             |
+| Ideal conditions      | Perfect inputs produce score 100 with all penalties at 0                         |
+| `temperaturePenalty`  | Ideal band 18–24°C, cold extreme (0°C), hot extreme (38°C), clamping, midpoint   |
+| `humidityPenalty`     | Ideal band 40–60%, extremes at 0% and 100%                                       |
+| `windPenalty`         | Calm threshold (≤15 km/h), maximum (60 km/h), clamping above maximum             |
+| `cloudinessPenalty`   | Clear sky, thunderstorm/rain/snow, mist/fog, overcast clouds                     |
+| Combined / edge cases | Worst-case scenario, tropical storm, missing `wind` field, empty `weather` array |
+
+A `makeWeather(tempC, humidity, windMps, cloudsPercent, weatherId)` helper constructs minimal fake OWM response objects, so tests read clearly without noise from irrelevant fields.
+
+Run with:
+
+```bash
+cd backend
+npm test
+```
+
+---
+
+### Sorting and Filtering
+
+The Dashboard controls bar provides two dropdowns that operate entirely on already-fetched data using `useMemo` — no additional API calls are made when the selection changes, so the UI responds instantly.
+
+**Sort options:**
+
+| Option                  | Behaviour              |
+| ----------------------- | ---------------------- |
+| Comfort Score (default) | Highest score first    |
+| Temp ↑ (coldest first)  | Ascending temperature  |
+| Temp ↓ (hottest first)  | Descending temperature |
+| Humidity (high→low)     | Most humid first       |
+| Wind (high→low)         | Windiest first         |
+| City Name (A→Z)         | Alphabetical           |
+
+**Filter options:**
+
+| Option               | Score range shown |
+| -------------------- | ----------------- |
+| All cities (default) | Everything        |
+| Excellent            | 80 – 100          |
+| Good                 | 60 – 79           |
+| Fair                 | 40 – 59           |
+| Poor                 | 20 – 39           |
+| Harsh                | 0 – 19            |
+
+The filter bands match the comfort labels shown on each city card. The count line below the controls dynamically shows how many cities are visible and the active sort/filter state.
+
+---
+
+### Temperature Trend Charts
+
+Each city card displays a 6-point SVG line chart showing a temperature trend. A **Show Charts / Hide Charts** toggle button in the controls bar shows or hides the charts across all cards simultaneously.
+
+**Data source note:** OpenWeatherMap's free `/weather` endpoint returns only the current moment, not historical data. To show a meaningful trend without a second API call or a paid plan, the chart generates ±2°C of plausible variation around the current temperature using a seeded pseudo-random function (seeded by `cityCode`). This ensures the same city always renders the same shape across re-renders. The chart is labelled _"Temperature trend (simulated ±2°C)"_ to make the nature of the data clear.
+
+The chart is implemented as pure SVG in `TemperatureChart.jsx` with no third-party chart library, keeping the bundle lean. It uses `var(--chart-line)` and `var(--chart-grid)` CSS variables so it switches colours correctly in dark mode.
+
+When the backend is upgraded to call OWM's `/forecast` endpoint, the `generateTrendData` function inside `TemperatureChart.jsx` can be replaced with real hourly values — the chart rendering logic does not need to change.
+
+---
+
 ## Known Limitations
 
 1. **Cities.json is small** — only 8 cities are included. More cities can be added but `cities.json` is treated as read-only per the spec.
@@ -219,3 +329,4 @@ The cache is implemented with `node-cache` (in-process, no Redis required).
 4. **Auth0 free tier** — MFA and advanced login policies require certain Auth0 plan features; the free tier supports TOTP-based MFA but email OTP may require a paid plan depending on tenant settings.
 5. **OWM free tier rate limit** — 60 calls/minute. With 8 cities this is well within limits, but a large city list would require batching.
 6. **No HTTPS in dev** — run behind a reverse proxy (nginx/Caddy) with TLS in production.
+7. **Simulated temperature trend** — the temperature charts use generated data, not real historical readings. Upgrading to OWM's `/forecast` endpoint would provide genuine 3-hour interval forecasts.
